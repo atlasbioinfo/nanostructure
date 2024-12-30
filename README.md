@@ -1,2 +1,5 @@
-# nanostructure
-Drawing suite specifically designed for illustrating RNA structure libraries derived from Nanopore sequencing technologies.
+# Nanostructure
+
+A Python tool for visualizing BAM file alignments at specific genomic positions.
+
+## Installation

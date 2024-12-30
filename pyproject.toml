@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nanostructure"
+version = "0.1.0"
+description = "A tool for visualizing BAM file alignments"
+authors = [{name = "Your Name", email = "your.email@example.com"}]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.7"
+dependencies = [
+    "Pillow",
+    "pysam",
+    "click",
+]
+
+[project.scripts]
+nanostructure = "nanostructure.cli:main" 
