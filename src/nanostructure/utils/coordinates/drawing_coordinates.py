@@ -1,3 +1,4 @@
+from ...config.colors import colors
 from .gene_coordinates import GeneCoordinates
 from .image_renderer import ImageRenderer
 
@@ -8,8 +9,10 @@ class DrawingCoordinates(GeneCoordinates):
         super().__init__(*args, **kwargs)
         self.renderer = None
         self.axisloc = "top"
-        self.exon_height = 20
-        self.intron_height = 2
+        self.exon_height = colors['dimensions']['exon_height']
+        self.intron_height = colors['dimensions']['intron_height']
+        self.TRACK_MARGIN = colors['dimensions']['track_margin']
+        self.margin = colors['margins']
         
     def initialize_renderer(self):
         """Initialize the image renderer"""
@@ -63,13 +66,7 @@ class DrawingCoordinates(GeneCoordinates):
             'exons': [],
             'strand': None,
             'gene_name': self.transcript_id,
-            'style': {
-                'exon_fill': '#000000',
-                'exon_opacity': 0.7,
-                'intron_color': '#666666',
-                'arrow_size': 8,
-                'text_color': '#333333'
-            }
+            'style': colors['gene']
         }
         
         if self.gene_annotation:
@@ -130,3 +127,7 @@ class DrawingCoordinates(GeneCoordinates):
                 })
         
         return draw_data
+        
+    def calculate_track_start_y(self, gene_y):
+        """Calculate the starting y position for read tracks"""
+        return gene_y + self.exon_height + self.TRACK_MARGIN

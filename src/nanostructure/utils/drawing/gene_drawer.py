@@ -2,15 +2,10 @@ class GeneDrawer:
     """Handle drawing of gene structures"""
     
     def __init__(self, style=None):
-        self.style = style or {
-            'exon_fill': '#000000',
-            'exon_opacity': 0.7,
-            'intron_color': '#666666',
-            'arrow_size': 8,
-            'text_color': '#333333'
-        }
-        self.exon_height = 20
-        self.intron_height = 2
+        from nanostructure.config import colors
+        self.style = style or colors['gene']
+        self.exon_height = colors['dimensions']['exon_height']
+        self.intron_height = colors['dimensions']['intron_height']
 
     def draw_gene_structure(self, render_data, gene_annotation):
         """

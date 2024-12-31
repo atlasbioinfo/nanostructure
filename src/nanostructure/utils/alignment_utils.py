@@ -2,44 +2,94 @@ import pysam
 import random
 from .coordinate_utils import find_available_track_position
 
-def collect_read_alignments(bam_path, chrom, start_pos, end_pos, image_width, max_reads=100):
-    """Collect and process read alignments from BAM file with downsampling"""
+def find_exon_blocks(read):
+    """Find exon positions in the read alignment"""
+    blocks = []
+    read_pos = read.reference_start
+    
+    for op, length in read.cigartuples:
+        # Match/Mismatch/Deletion (consumes reference)
+        if op in [0, 2, 7, 8]:
+            blocks.append((read_pos, length))
+            read_pos += length
+        # Skip/Intron (N)
+        elif op == 3:
+            read_pos += length
+        # Other operations
+        else:
+            continue
+    return blocks
+
+def collect_read_alignments(bam_path, chrom, start_pos, end_pos, image_width, max_reads=100, method='continuous'):
+    """Collect and process read alignments from BAM file with downsampling
+    
+    Args:
+        method (str): How to handle many reads:
+            - 'continuous': Similar to IGV, pack reads continuously 
+            - 'downsample': Randomly sample max_reads number of reads
+            - '3_end': Sort by 3' end and take top max_reads
+            - '5_end': Sort by 5' end and take top max_reads
+    """
     bam = pysam.AlignmentFile(bam_path, 'rb')
     forward_tracks = []
     reverse_tracks = []
     
-    # First pass: count total reads in region
-    total_reads = sum(1 for _ in bam.fetch(chrom, start_pos, end_pos))
-    
-    # Calculate sampling fraction if needed
-    fraction = 1.0 if max_reads <= 0 else min(1.0, (max_reads * 2) / total_reads)
-    
-    # Second pass: collect reads with sampling
+    # Collect all reads first
     for read in bam.fetch(chrom, start_pos, end_pos):
-        if fraction < 1.0 and random.random() > fraction:
-            continue
-            
-        if read.is_unmapped or read.reference_start is None:
+        if read.is_unmapped or read.reference_start is None or not read.cigartuples:
             continue
             
         read_start = read.reference_start
         read_end = read.reference_end or (read_start + len(read.query_sequence))
         
-        # Convert to image coordinates
+        # Get exon blocks
+        exon_blocks = find_exon_blocks(read)
+        
+        # Convert coordinates
         x_start = int((read_start - start_pos) * image_width / (end_pos - start_pos))
         x_end = int((read_end - start_pos) * image_width / (end_pos - start_pos))
         
-        # Ensure coordinates are within bounds
+        # Convert exon blocks
+        image_blocks = []
+        for block_start, block_length in exon_blocks:
+            block_x_start = int((block_start - start_pos) * image_width / (end_pos - start_pos))
+            block_x_end = int((block_start + block_length - start_pos) * image_width / (end_pos - start_pos))
+            image_blocks.append((block_x_start, block_x_end))
+        
         x_start = max(0, min(x_start, image_width))
         x_end = max(0, min(x_end, image_width))
         
         if x_end > x_start:
             if read.is_reverse:
-                reverse_tracks.append((x_start, x_end, 0, read))
+                reverse_tracks.append((x_start, x_end, 0, read, image_blocks))
             else:
-                forward_tracks.append((x_start, x_end, 0, read))
-    
-    # Sort by start position for display
+                forward_tracks.append((x_start, x_end, 0, read, image_blocks))
+
+    # Handle large number of reads based on method
+    if method == 'downsample' and len(forward_tracks) + len(reverse_tracks) > max_reads:
+        # Randomly sample reads
+        all_reads = forward_tracks + reverse_tracks
+        sampled_indices = random.sample(range(len(all_reads)), max_reads)
+        sampled_reads = [all_reads[i] for i in sampled_indices]
+        forward_tracks = [r for r in sampled_reads if not r[3].is_reverse]
+        reverse_tracks = [r for r in sampled_reads if r[3].is_reverse]
+        
+    elif method == '3_end' and len(forward_tracks) + len(reverse_tracks) > max_reads:
+        # Sort by 3' end position
+        forward_tracks.sort(key=lambda x: x[1], reverse=True)
+        reverse_tracks.sort(key=lambda x: x[0])
+        forward_tracks = forward_tracks[:max_reads//2]
+        reverse_tracks = reverse_tracks[:max_reads//2]
+        
+    elif method == '5_end' and len(forward_tracks) + len(reverse_tracks) > max_reads:
+        # Sort by 5' end position
+        forward_tracks.sort(key=lambda x: x[0])
+        reverse_tracks.sort(key=lambda x: x[1], reverse=True)
+        forward_tracks = forward_tracks[:max_reads//2]
+        reverse_tracks = reverse_tracks[:max_reads//2]
+        
+    # For 'continuous' method, keep all reads and let display handle packing
+        
     forward_tracks.sort(key=lambda x: x[0])
     reverse_tracks.sort(key=lambda x: x[0])
     

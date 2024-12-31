@@ -6,124 +6,179 @@ from .base_renderer import BaseRenderer
 class VectorRenderer(BaseRenderer):
     """Vector format (SVG/PDF) renderer implementation"""
     
-    def render(self, forward_tracks, reverse_tracks, output_path, title):
+    def render(self, forward_tracks, reverse_tracks, output_path, title=None):
         """Render tracks to SVG/PDF format"""
-        # 获取通用渲染数据
+        total_tracks = len(forward_tracks) + len(reverse_tracks)
+        if total_tracks > self.max_tracks:
+            self.optimize_track_layout(forward_tracks + reverse_tracks)
+            
         render_data = self._render_common(forward_tracks, reverse_tracks, title)
+        dwg = self._create_drawing(output_path, render_data)
         
-        # 创建SVG绘图对象
+        if hasattr(self, 'coordinates'):
+            self._draw_coordinates(dwg)
+        
+        if title:
+            self._draw_title(dwg, render_data['title'])
+        
+        self._draw_tracks(dwg, render_data['tracks'])
+        
+        self._save_drawing(dwg, output_path)
+    
+    def _create_drawing(self, output_path, render_data):
+        """Create and initialize the SVG drawing"""
         dwg = svgwrite.Drawing(output_path, size=(render_data['dimensions']['width'],
-                                                 render_data['dimensions']['height']))
+                                                render_data['dimensions']['height']))
         
-        # 添加背景
+        # Add metadata using text elements in a hidden group
+        metadata = dwg.g(style="display:none")
+        metadata.add(dwg.text("Created by NanoStructure (Haopeng Yu)", id="creator"))
+        metadata.add(dwg.text("Generated using NanoStructure", id="software"))
+        metadata.add(dwg.text("https://github.com/atlasbioinfo/nanostructure", id="github"))
+        dwg.add(metadata)
+        
+        # Add background rectangle
         dwg.add(dwg.rect(insert=(0, 0),
                         size=(render_data['dimensions']['width'],
                               render_data['dimensions']['height']),
                         fill=self.colors['background']))
+        return dwg
+    
+    def _draw_coordinates(self, dwg):
+        """Draw coordinate system including axis, ticks, and labels"""
+        coord = self.coordinates
+        if coord.font is None:
+            coord.set_font()
+        coord.resize_height()
+        coord.calculate_ticks()
         
-        # 绘制坐标系
-        if hasattr(self, 'coordinates'):
-            coord = self.coordinates
-            
-            # 确保坐标轴数据已计算
-            if coord.font is None:
-                coord.set_font()
-            coord.resize_height()
-            coord.calculate_ticks()
-            
-            # 获取渲染数据
-            coord_data = coord.get_render_data(65)
-            
-            # Add chromosome label
-            if 'chrom_label' in coord_data:
-                dwg.add(dwg.text(coord_data['chrom_label']['text'],
-                                insert=coord_data['chrom_label']['position'],
-                                font_family='Arial',
-                                font_size=f"{coord.font_size}px",
-                                fill=coord_data['chrom_label']['color']))
-            
-            # Draw main axis line
-            dwg.add(dwg.line(start=coord_data['axis']['line'][0],
-                            end=coord_data['axis']['line'][1],
-                            stroke=coord_data['axis']['color'],
-                            stroke_width=coord_data['axis']['width']))
-            
-            # Draw ticks and labels
-            for tick in coord_data['ticks']:
-                dwg.add(dwg.line(start=tick['start'],
-                                end=tick['end'],
-                                stroke=tick['color'],
-                                stroke_width=tick['width']))
-            
-            for label in coord_data['labels']:
-                dwg.add(dwg.text(label['text'],
-                                insert=label['position'],
-                                text_anchor='middle',
-                                font_family='Arial',
-                                font_size=f"{coord.font_size}px",
-                                fill=label['color']))
-            
-            # Draw gene structure if available
-            gene_data = coord.draw_gene_structure(coord_data['axis']['y'])
-            if gene_data:
-                # Draw gene name
-                if gene_data['gene_name'] and gene_data['intron_line']:
-                    dwg.add(dwg.text(gene_data['gene_name'],
-                                   insert=gene_data['intron_line']['label_position'],
-                                   font_family='Arial',
-                                   font_size='12px',
-                                   fill=gene_data['style']['text_color']))
-                
-                # Draw intron line
-                if gene_data['intron_line']:
-                    dwg.add(dwg.line(start=gene_data['intron_line']['start'],
-                                   end=gene_data['intron_line']['end'],
-                                   stroke=gene_data['style']['intron_color'],
-                                   stroke_width=gene_data['intron_line']['width']))
-                    
-                    # Draw direction arrows
-                    for arrow in gene_data['intron_line']['arrows']:
-                        points = arrow['points']
-                        dwg.add(dwg.polyline(points=points,
-                                           stroke=gene_data['style']['intron_color'],
-                                           fill='none',
-                                           stroke_width=1))
-                
-                # Draw exons
-                for exon in gene_data['exons']:
-                    dwg.add(dwg.rect(insert=exon['position'],
-                                   size=exon['size'],
-                                   fill=gene_data['style']['exon_fill'],
-                                   fill_opacity=gene_data['style']['exon_opacity']))
+        coord_data = coord.get_render_data(65)
         
-        # 绘制标题
-        if title:
-            dwg.add(dwg.text(render_data['title']['text'],
-                           insert=render_data['title']['position'],
-                           font_family='Arial',
-                           font_size='14px',
-                           font_weight='bold',
-                           fill=self.colors['axis']))
+        # Draw chromosome label
+        if 'chrom_label' in coord_data:
+            self._draw_chrom_label(dwg, coord_data['chrom_label'], coord.font_size)
         
-        # 绘制正向和反向reads
-        track_start_y = 120
-        for track_data in render_data['tracks']['forward']:
-            track = track_data['track']
-            dwg.add(dwg.rect(
-                insert=(track[0], track_data['y'] + track_start_y),
-                size=(track[1] - track[0], self.read_height),
-                fill=self.colors['F']
+        # Draw axis and ticks
+        self._draw_axis_and_ticks(dwg, coord_data, coord)
+        
+        # Draw gene structure
+        self._draw_gene_structure(dwg, coord, coord_data['axis']['y'])
+    
+    def _draw_chrom_label(self, dwg, label_data, font_size):
+        """Draw chromosome label"""
+        dwg.add(dwg.text(label_data['text'],
+                        insert=label_data['position'],
+                        font_family='Arial',
+                        font_size=f"{font_size}px",
+                        fill=label_data['color']))
+    
+    def _draw_axis_and_ticks(self, dwg, coord_data, coord):
+        """Draw main axis line, ticks and labels"""
+        # Draw main axis
+        dwg.add(dwg.line(
+            start=coord_data['axis']['line'][0],
+            end=coord_data['axis']['line'][1],
+            stroke=coord_data['axis']['color'],
+            stroke_width=coord_data['axis']['width']
+        ))
+        
+        # Draw ticks and labels
+        for tick in coord_data['ticks']:
+            dwg.add(dwg.line(
+                start=tick['start'],
+                end=tick['end'],
+                stroke=tick['color'],
+                stroke_width=tick['width']
             ))
         
-        for track_data in render_data['tracks']['reverse']:
-            track = track_data['track']
-            dwg.add(dwg.rect(
-                insert=(track[0], track_data['y'] + track_start_y),
-                size=(track[1] - track[0], self.read_height),
-                fill=self.colors['R']
+        for label in coord_data['labels']:
+            dwg.add(dwg.text(
+                label['text'],
+                insert=label['position'],
+                text_anchor='middle',
+                font_family='Arial',
+                font_size=f"{coord.font_size}px",
+                fill=label['color']
             ))
+    
+    def _draw_gene_structure(self, dwg, coord, axis_y):
+        """Draw gene structure including introns and exons"""
+        gene_data = coord.draw_gene_structure(axis_y)
+        if not gene_data:
+            return
+            
+        # Draw gene components
+        if gene_data['gene_name'] and gene_data['intron_line']:
+            self._draw_gene_name_and_intron(dwg, gene_data)
+        self._draw_exons(dwg, gene_data)
+    
+    def _draw_gene_name_and_intron(self, dwg, gene_data):
+        """Draw gene name and intron line with arrows"""
+        # Draw gene name
+        dwg.add(dwg.text(gene_data['gene_name'],
+                        insert=gene_data['intron_line']['label_position'],
+                        font_family='Arial',
+                        font_size='12px',
+                        fill=gene_data['style']['text_color']))
         
-        # 保存文件
+        # Draw intron line
+        dwg.add(dwg.line(start=gene_data['intron_line']['start'],
+                        end=gene_data['intron_line']['end'],
+                        stroke=gene_data['style']['intron_color'],
+                        stroke_width=gene_data['intron_line']['width']))
+        
+        # Draw direction arrows
+        for arrow in gene_data['intron_line']['arrows']:
+            points = arrow['points']
+            dwg.add(dwg.polyline(points=points,
+                               stroke=gene_data['style']['intron_color'],
+                               fill='none',
+                               stroke_width=1))
+    
+    def _draw_exons(self, dwg, gene_data):
+        """Draw exon blocks"""
+        for exon in gene_data['exons']:
+            dwg.add(dwg.rect(
+                insert=exon['position'],
+                size=exon['size'],
+                fill=gene_data['style']['exon_color'],
+                fill_opacity=gene_data['style'].get('exon_opacity', 1)
+            ))
+    
+    def _draw_tracks(self, dwg, tracks_data):
+        """Draw forward and reverse tracks"""
+        gene_y = self.coordinates.draw_gene_structure(self.margin['top'])['gene_y']
+        track_start_y = self.coordinates.calculate_track_start_y(gene_y)
+        
+        for direction in ['forward', 'reverse']:
+            color_key = 'F' if direction == 'forward' else 'R'
+            for track_data in tracks_data[direction]:
+                self._draw_single_track(dwg, track_data, track_start_y, self.colors['reads'][color_key])
+    
+    def _draw_single_track(self, dwg, track_data, track_start_y, color):
+        """Draw a single track including intron lines and exon blocks"""
+        track = track_data['track']
+        x_start, x_end, _, read, blocks = track
+        y = track_data['y'] + track_start_y
+        
+        # Draw intron line
+        dwg.add(dwg.line(
+            start=(x_start, y + self.read_height/2),
+            end=(x_end, y + self.read_height/2),
+            stroke='#A6A6A6',
+            stroke_width=1
+        ))
+        
+        # Draw exon blocks
+        for block_start, block_end in blocks:
+            dwg.add(dwg.rect(
+                insert=(block_start, y),
+                size=(block_end - block_start, self.read_height),
+                fill=color
+            ))
+    
+    def _save_drawing(self, dwg, output_path):
+        """Save drawing as SVG or convert to PDF"""
         if output_path.endswith('.pdf'):
             temp_svg = output_path.replace('.pdf', '.svg')
             dwg.saveas(temp_svg)
@@ -135,3 +190,14 @@ class VectorRenderer(BaseRenderer):
                 print(f"SVG file saved as: {temp_svg}")
         else:
             dwg.save() 
+    
+    def _draw_title(self, dwg, title_data):
+        """Draw title text"""
+        if title_data['text']:
+            dwg.add(dwg.text(
+                title_data['text'],
+                insert=title_data['position'],
+                font_family='Arial',
+                font_size='16px',
+                fill=self.colors['title_color']
+            )) 

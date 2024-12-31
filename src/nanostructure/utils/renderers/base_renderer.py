@@ -1,10 +1,11 @@
 class BaseRenderer:
     """Base renderer with common functionality"""
-    def __init__(self, colors, image_width=1000, read_height=None, track_spacing=None):
+    def __init__(self, colors, image_width, read_height=None, track_spacing=None):
         self.colors = colors
         self.image_width = image_width
-        self.read_height = read_height
-        self.track_spacing = track_spacing
+        self.read_height = read_height or 8  # 默认read高度
+        self.track_spacing = track_spacing or 2  # 默认track间距
+        self.max_tracks = 100  # 添加最大track数限制
         
         # 基础尺寸设置
         self.min_total_height = 400
@@ -73,7 +74,8 @@ class BaseRenderer:
             'margins': self.margin,
             'title': {
                 'text': title,
-                'position': (self.margin['left'], self.margin['top'] - 100)
+                'position': (self.margin['left'], self.margin['top'] - 100),
+                'color': self.colors['title_color']
             },
             'read_height': self.read_height,
             'track_spacing': self.track_spacing,
@@ -113,3 +115,12 @@ class BaseRenderer:
         Abstract method to be implemented by specific renderers
         """
         raise NotImplementedError("Render method must be implemented by specific renderer") 
+
+    def optimize_track_layout(self, tracks):
+        """优化track布局"""
+        total_tracks = len(tracks)
+        if total_tracks > self.max_tracks:
+            # 计算压缩比
+            compression_ratio = self.max_tracks / total_tracks
+            self.read_height = max(1, int(self.read_height * compression_ratio))
+            self.track_spacing = max(0, int(self.track_spacing * compression_ratio)) 

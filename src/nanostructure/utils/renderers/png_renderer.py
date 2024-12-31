@@ -4,8 +4,12 @@ from .base_renderer import BaseRenderer
 class PNGRenderer(BaseRenderer):
     """PNG format renderer implementation"""
     
-    def render(self, forward_tracks, reverse_tracks, output_path, title):
+    def render(self, forward_tracks, reverse_tracks, output_path, title=None):
         """Render tracks to PNG format"""
+        total_tracks = len(forward_tracks) + len(reverse_tracks)
+        if total_tracks > self.max_tracks:
+            self.optimize_track_layout(forward_tracks + reverse_tracks)
+            
         # 获取通用渲染数据
         render_data = self._render_common(forward_tracks, reverse_tracks, title)
         
@@ -54,20 +58,26 @@ class PNGRenderer(BaseRenderer):
         # 绘制正向reads
         for track_data in render_data['tracks']['forward']:
             track = track_data['track']
-            draw.rectangle(
-                [(track[0], track_data['y']),
-                 (track[1], track_data['y'] + self.read_height)],
-                fill=self.colors['F']
-            )
+            self.draw_read(draw, track, track_data['y'])
         
         # 绘制反向reads
         for track_data in render_data['tracks']['reverse']:
             track = track_data['track']
-            draw.rectangle(
-                [(track[0], track_data['y']),
-                 (track[1], track_data['y'] + self.read_height)],
-                fill=self.colors['R']
-            )
+            self.draw_read(draw, track, track_data['y'])
         
         # 保存图像
         img.save(output_path) 
+
+    def draw_read(self, draw, track, y_pos):
+        """Draw a single read with exons and intron lines"""
+        x_start, x_end, _, read, blocks = track
+        
+        # Draw thin line for full read length (intron connection)
+        draw.line([(x_start, y_pos), (x_end, y_pos)], 
+                 fill=self.colors['background'], width=1)
+        
+        # Draw thicker blocks for exons
+        for block_start, block_end in blocks:
+            draw.line([(block_start, y_pos), (block_end, y_pos)],
+                     fill=self.colors['F' if not read.is_reverse else 'R'],
+                     width=self.read_height) 

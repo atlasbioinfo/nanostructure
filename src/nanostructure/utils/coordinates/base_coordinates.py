@@ -1,25 +1,26 @@
 from PIL import ImageFont
 from pathlib import Path
 import math
+from ...config.colors import colors
 
 class BaseCoordinates:
     """Base class for coordinate handling"""
     
     # 基础尺寸常量
-    MIN_BAR_SIZE = 5
-    MIN_AXIS_LABEL_WIDTH = 100
-    GAP_LABEL_AND_BAR = 4
+    MIN_BAR_SIZE = colors['dimensions']['min_bar_size']
+    MIN_AXIS_LABEL_WIDTH = colors['dimensions']['min_axis_label_width']
+    GAP_LABEL_AND_BAR = colors['dimensions']['gap_label_and_bar']
     
     # 样式常量
-    MAJOR_TICK_LENGTH = 8
-    MINOR_TICK_LENGTH = 4
-    AXIS_LINE_WIDTH = 2
-    TICK_LINE_WIDTH = 1
+    MAJOR_TICK_LENGTH = colors['axis']['major_tick_length']
+    MINOR_TICK_LENGTH = colors['axis']['minor_tick_length']
+    AXIS_LINE_WIDTH = colors['axis']['line_width']
+    TICK_LINE_WIDTH = colors['axis']['tick_line_width']
     
     # 高度相关常量
-    AXIS_TOP_MARGIN = 30     # 顶部留白
-    LABEL_HEIGHT = 25        # 标签高度
-    GENE_STRUCTURE_MARGIN = 40  # 基因结构与坐标轴的间距
+    AXIS_TOP_MARGIN = colors['spacing']['axis_top_margin']
+    LABEL_HEIGHT = colors['spacing']['label_height']
+    GENE_STRUCTURE_MARGIN = colors['spacing']['gene_structure_margin']
 
     def __init__(self, chrom=None, start_pos=None, end_pos=None, xscale=None, width=1000, height=50):
         self.chrom = chrom
@@ -34,9 +35,9 @@ class BaseCoordinates:
         self.font_size = 12
         
         # 样式设置
-        self.bgcolor = '#ffffff'
-        self.axiscolor = '#000000'
-        self.labelcolor = '#000000'
+        self.bgcolor = colors['background']
+        self.axiscolor = colors['axis']
+        self.labelcolor = colors['label']
         
         # 计算相关
         self.axis_pos_list = []
@@ -86,25 +87,18 @@ class BaseCoordinates:
             current_pos += interval
 
     def get_render_data(self, y_position):
-        """Get rendering data for coordinates"""
-        if self.font is None:
-            self.set_font()
-        
-        self.calculate_ticks()
-        
+        """Get coordinate rendering data"""
         render_data = {
             'axis': {
+                'line': [(self.margin['left'], y_position),
+                        (self.width - self.margin['right'], y_position)],
                 'y': y_position,
-                'line': [(0, y_position), (self.width, y_position)],
-                'color': self.axiscolor,
-                'width': self.AXIS_LINE_WIDTH,
-                'margins': {
-                    'gene': self.GENE_STRUCTURE_MARGIN
-                }
+                'color': colors['axis']['color'],
+                'width': colors['axis']['line_width']
             },
             'ticks': [],
             'labels': [],
-            'scale': self.xscale  # Add scale information
+            'scale': self.xscale
         }
         
         # Add ticks and labels
@@ -113,8 +107,8 @@ class BaseCoordinates:
             render_data['ticks'].append({
                 'start': (x, y_position),
                 'end': (x, y_position + self.MAJOR_TICK_LENGTH),
-                'color': self.axiscolor,
-                'width': self.TICK_LINE_WIDTH
+                'color': colors['axis']['color'],
+                'width': colors['axis']['tick_line_width']
             })
             
             # Label data
@@ -122,7 +116,7 @@ class BaseCoordinates:
             render_data['labels'].append({
                 'text': label,
                 'position': (x, y_position + self.MAJOR_TICK_LENGTH + self.GAP_LABEL_AND_BAR),
-                'color': self.labelcolor,
+                'color': colors['label'],
                 'font': self.font
             })
         
@@ -131,7 +125,7 @@ class BaseCoordinates:
             render_data['chrom_label'] = {
                 'text': f"Chromosome {self.chrom}",
                 'position': (5, y_position - self.LABEL_HEIGHT),
-                'color': self.labelcolor,
+                'color': colors['label'],
                 'font': self.font
             }
             
