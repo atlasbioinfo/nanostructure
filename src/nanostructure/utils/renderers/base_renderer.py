@@ -13,10 +13,10 @@ class BaseRenderer:
         
         # 边距设置
         self.margin = {
-            'top': 150,     # 为标题和坐标轴留出空间
-            'bottom': 50,   # 底部边距
-            'left': 50,     # 左边距
-            'right': 50     # 右边距
+            'top': 10,      # 改为更小的值
+            'bottom': 200,   
+            'left': 50,     
+            'right': 50     
         }
         
         # 布局设置

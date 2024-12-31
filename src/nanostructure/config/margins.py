@@ -23,7 +23,7 @@ MARGINS = {
     },
     'gene_model': {
         'top': 20,     # Top margin of gene model
-        'bottom': 20,  # Bottom margin of gene model
+        'bottom': 0,  # Bottom margin of gene model
         'left': margin_to_the_left,    # Left margin of gene model
         'right': 50,   # Right margin of gene model
         'height': 50   # Total height of gene model area

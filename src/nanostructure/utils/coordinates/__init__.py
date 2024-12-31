@@ -1,4 +1,4 @@
-from .gene_coordinates import GeneCoordinates
+from .drawing_coordinates import DrawingCoordinates
 from .scale import XScale
 
 __all__ = ['DrawingCoordinates', 'XScale'] 

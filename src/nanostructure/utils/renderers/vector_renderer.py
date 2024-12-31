@@ -16,12 +16,14 @@ class VectorRenderer(BaseRenderer):
         dwg = self._create_drawing(output_path, render_data)
         
         if hasattr(self, 'coordinates'):
-            self._draw_coordinates(dwg)
+            # Draw coordinates and get gene_y value
+            gene_y = self._draw_coordinates(dwg)
         
         if title:
             self._draw_title(dwg, render_data['title'])
         
-        self._draw_tracks(dwg, render_data['tracks'])
+        # Pass gene_y to _draw_tracks
+        self._draw_tracks(dwg, render_data['tracks'], gene_y)
         
         self._save_drawing(dwg, output_path)
     
@@ -61,8 +63,9 @@ class VectorRenderer(BaseRenderer):
         # Draw axis and ticks
         self._draw_axis_and_ticks(dwg, coord_data, coord)
         
-        # Draw gene structure
-        self._draw_gene_structure(dwg, coord, coord_data['axis']['y'])
+        # Draw gene structure and return gene_y_end
+        gene_y_end = self._draw_gene_structure(dwg, coord, coord_data['axis']['y'])
+        return gene_y_end
     
     def _draw_chrom_label(self, dwg, label_data, font_size):
         """Draw chromosome label"""
@@ -103,14 +106,16 @@ class VectorRenderer(BaseRenderer):
     
     def _draw_gene_structure(self, dwg, coord, axis_y):
         """Draw gene structure including introns and exons"""
-        gene_data = coord.draw_gene_structure(axis_y)
+        gene_data, gene_y_end = coord.draw_gene_structure(axis_y)
         if not gene_data:
-            return
+            return None
             
         # Draw gene components
         if gene_data['gene_name'] and gene_data['intron_line']:
             self._draw_gene_name_and_intron(dwg, gene_data)
         self._draw_exons(dwg, gene_data)
+        
+        return gene_y_end
     
     def _draw_gene_name_and_intron(self, dwg, gene_data):
         """Draw gene name and intron line with arrows"""
@@ -145,23 +150,23 @@ class VectorRenderer(BaseRenderer):
                 fill_opacity=gene_data['style'].get('exon_opacity', 1)
             ))
     
-    def _draw_tracks(self, dwg, tracks_data):
+    def _draw_tracks(self, dwg, tracks_data, gene_y):
         """Draw forward and reverse tracks"""
-        gene_y = self.coordinates.draw_gene_structure(self.margin['top'])['gene_y']
-        track_start_y = self.coordinates.calculate_track_start_y(gene_y)
+        track_start_y = gene_y
+        print(f"Tracks starting y-coordinate: {track_start_y}")
         
         for direction in ['forward', 'reverse']:
             color_key = 'F' if direction == 'forward' else 'R'
             for track_data in tracks_data[direction]:
                 self._draw_single_track(dwg, track_data, track_start_y, self.colors['reads'][color_key])
     
-    def _draw_single_track(self, dwg, track_data, track_start_y, color):
+    def _draw_single_track(self, dwg, track_data, track_start_y, base_color):
         """Draw a single track including intron lines and exon blocks"""
         track = track_data['track']
         x_start, x_end, _, read, blocks = track
         y = track_data['y'] + track_start_y
         
-        # Draw intron line
+        # Draw intron line 
         dwg.add(dwg.line(
             start=(x_start, y + self.read_height/2),
             end=(x_end, y + self.read_height/2),
@@ -169,8 +174,17 @@ class VectorRenderer(BaseRenderer):
             stroke_width=1
         ))
         
-        # Draw exon blocks
-        for block_start, block_end in blocks:
+        # Color mapping for different operations
+        color_map = {
+            'match': base_color,
+            'mismatch': '#FF0000',  # Red
+            'insertion': '#FFFF00',  # Yellow
+            'deletion': '#FFA500'    # Orange
+        }
+        
+        # Draw exon blocks with appropriate colors
+        for block_start, block_end, op_type in blocks:
+            color = color_map.get(op_type, base_color)
             dwg.add(dwg.rect(
                 insert=(block_start, y),
                 size=(block_end - block_start, self.read_height),

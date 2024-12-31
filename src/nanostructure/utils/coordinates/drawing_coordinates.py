@@ -36,7 +36,7 @@ class DrawingCoordinates(GeneCoordinates):
         coord_data = self.get_render_data(y_position)
         
         # Get gene structure rendering data
-        gene_data = self.draw_gene_structure(y_position)
+        gene_data, gene_y_end = self.draw_gene_structure(y_position)
         
         # Render everything
         self.renderer.create_image()
@@ -53,13 +53,20 @@ class DrawingCoordinates(GeneCoordinates):
             yi: y-position of the coordinate axis
             
         Returns:
-            dict: Dictionary containing drawing information
+            tuple: (dict, float) containing:
+                - dict: Drawing information for gene structure
+                - float: Y-end position of the gene structure
         """
         if not self.gene_annotation:
-            return None
+            return None, yi
             
         gene_y = yi + self.LABEL_HEIGHT + self.GENE_STRUCTURE_MARGIN
+        gene_y_end = gene_y + self.exon_height
         
+        print("\n=== draw_gene_structure called ===")
+        print(f"Gene drawing y start: {gene_y}")
+        print(f"Gene drawing y end: {gene_y_end}")
+
         draw_data = {
             'gene_y': gene_y,
             'intron_line': None,
@@ -126,7 +133,7 @@ class DrawingCoordinates(GeneCoordinates):
                     'size': (x2 - x1, self.exon_height)
                 })
         
-        return draw_data
+        return draw_data, gene_y_end
         
     def calculate_track_start_y(self, gene_y):
         """Calculate the starting y position for read tracks"""

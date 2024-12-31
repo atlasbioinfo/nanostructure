@@ -3,21 +3,25 @@ import random
 from .coordinate_utils import find_available_track_position
 
 def find_exon_blocks(read):
-    """Find exon positions in the read alignment"""
+    """Find exon positions and their operation types in the read alignment"""
     blocks = []
     read_pos = read.reference_start
     
     for op, length in read.cigartuples:
-        # Match/Mismatch/Deletion (consumes reference)
-        if op in [0, 2, 7, 8]:
-            blocks.append((read_pos, length))
+        # Match (0) or Mismatch (8)
+        if op in [0, 8]:
+            blocks.append((read_pos, length, 'match' if op == 0 else 'mismatch'))
             read_pos += length
-        # Skip/Intron (N)
+        # Deletion (2)
+        elif op == 2:
+            blocks.append((read_pos, length, 'deletion'))
+            read_pos += length
+        # Insertion (1)
+        elif op == 1:
+            blocks.append((read_pos, length, 'insertion'))
+        # Skip/Intron (3)
         elif op == 3:
             read_pos += length
-        # Other operations
-        else:
-            continue
     return blocks
 
 def collect_read_alignments(bam_path, chrom, start_pos, end_pos, image_width, max_reads=100, method='continuous'):
@@ -51,10 +55,10 @@ def collect_read_alignments(bam_path, chrom, start_pos, end_pos, image_width, ma
         
         # Convert exon blocks
         image_blocks = []
-        for block_start, block_length in exon_blocks:
+        for block_start, block_length, op_type in exon_blocks:
             block_x_start = int((block_start - start_pos) * image_width / (end_pos - start_pos))
             block_x_end = int((block_start + block_length - start_pos) * image_width / (end_pos - start_pos))
-            image_blocks.append((block_x_start, block_x_end))
+            image_blocks.append((block_x_start, block_x_end, op_type))
         
         x_start = max(0, min(x_start, image_width))
         x_end = max(0, min(x_end, image_width))
@@ -87,9 +91,8 @@ def collect_read_alignments(bam_path, chrom, start_pos, end_pos, image_width, ma
         reverse_tracks.sort(key=lambda x: x[1], reverse=True)
         forward_tracks = forward_tracks[:max_reads//2]
         reverse_tracks = reverse_tracks[:max_reads//2]
-        
+    
     # For 'continuous' method, keep all reads and let display handle packing
-        
     forward_tracks.sort(key=lambda x: x[0])
     reverse_tracks.sort(key=lambda x: x[0])
     
