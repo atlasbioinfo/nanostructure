@@ -7,7 +7,7 @@ from .utils.renderers.vector_renderer import VectorRenderer
 from .utils.coordinates.gene_coordinates import GeneCoordinates
 from .utils.coordinates.drawing_coordinates import DrawingCoordinates
 from .utils.coordinates.scale import XScale
-from .config import colors
+from .config import COLORS
 
 def parse_position(position_str):
     
@@ -83,9 +83,10 @@ def render_alignment_snapshot(bam_path, position=None, transcript=None, output_p
     # if format.lower() == "png":
     #     renderer = PNGRenderer(colors, image_width, read_height, track_spacing)
     # else:
-    renderer = VectorRenderer(colors, image_width, read_height, track_spacing)
+    renderer = VectorRenderer(COLORS, image_width, read_height, track_spacing)
     
     renderer.coordinates = coord
+    coord.renderer = renderer
     
     renderer.render(forward_tracks, reverse_tracks, output_path, title)
 

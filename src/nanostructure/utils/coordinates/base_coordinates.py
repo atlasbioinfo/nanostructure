@@ -1,26 +1,24 @@
 from PIL import ImageFont
 from pathlib import Path
 import math
-from ...config.colors import colors
+from ...config.colors import COLORS
+from ...config.coordinates import COORDINATES
 
 class BaseCoordinates:
     """Base class for coordinate handling"""
     
-    # 基础尺寸常量
-    MIN_BAR_SIZE = colors['dimensions']['min_bar_size']
-    MIN_AXIS_LABEL_WIDTH = colors['dimensions']['min_axis_label_width']
-    GAP_LABEL_AND_BAR = colors['dimensions']['gap_label_and_bar']
+    MIN_BAR_SIZE = COORDINATES['dimensions']['min_bar_size']
+    MIN_AXIS_LABEL_WIDTH = COORDINATES['dimensions']['min_axis_label_width']
+    GAP_LABEL_AND_BAR = COORDINATES['dimensions']['gap_label_and_bar']
     
-    # 样式常量
-    MAJOR_TICK_LENGTH = colors['axis']['major_tick_length']
-    MINOR_TICK_LENGTH = colors['axis']['minor_tick_length']
-    AXIS_LINE_WIDTH = colors['axis']['line_width']
-    TICK_LINE_WIDTH = colors['axis']['tick_line_width']
+    MAJOR_TICK_LENGTH = COORDINATES['axis']['major_tick_length']
+    MINOR_TICK_LENGTH = COORDINATES['axis']['minor_tick_length']
+    AXIS_LINE_WIDTH = COORDINATES['axis']['line_width']
+    TICK_LINE_WIDTH = COORDINATES['axis']['tick_line_width']
     
-    # 高度相关常量
-    AXIS_TOP_MARGIN = colors['spacing']['axis_top_margin']
-    LABEL_HEIGHT = colors['spacing']['label_height']
-    GENE_STRUCTURE_MARGIN = colors['spacing']['gene_structure_margin']
+    AXIS_TOP_MARGIN = COORDINATES['spacing']['axis_top_margin']
+    LABEL_HEIGHT = COORDINATES['spacing']['label_height']
+    GENE_STRUCTURE_MARGIN = COORDINATES['spacing']['gene_structure_margin']
 
     def __init__(self, chrom=None, start_pos=None, end_pos=None, xscale=None, width=1000, height=50):
         self.chrom = chrom
@@ -30,14 +28,12 @@ class BaseCoordinates:
         self.width = width
         self.height = height
         
-        # 字体相关
         self.font = None
         self.font_size = 12
         
-        # 样式设置
-        self.bgcolor = colors['background']
-        self.axiscolor = colors['axis']
-        self.labelcolor = colors['label']
+        self.bgcolor = COLORS['background']
+        self.axiscolor = COORDINATES['axis']
+        self.labelcolor = COLORS['label']
         
         # 计算相关
         self.axis_pos_list = []
@@ -93,8 +89,8 @@ class BaseCoordinates:
                 'line': [(self.margin['left'], y_position),
                         (self.width - self.margin['right'], y_position)],
                 'y': y_position,
-                'color': colors['axis']['color'],
-                'width': colors['axis']['line_width']
+                'color': COORDINATES['axis']['color'],
+                'width': COORDINATES['axis']['line_width']
             },
             'ticks': [],
             'labels': [],
@@ -107,8 +103,8 @@ class BaseCoordinates:
             render_data['ticks'].append({
                 'start': (x, y_position),
                 'end': (x, y_position + self.MAJOR_TICK_LENGTH),
-                'color': colors['axis']['color'],
-                'width': colors['axis']['tick_line_width']
+                'color': COLORS['axis_color'],
+                'width': COORDINATES['axis']['tick_line_width']
             })
             
             # Label data
@@ -116,7 +112,7 @@ class BaseCoordinates:
             render_data['labels'].append({
                 'text': label,
                 'position': (x, y_position + self.MAJOR_TICK_LENGTH + self.GAP_LABEL_AND_BAR),
-                'color': colors['label'],
+                'color': COLORS['label'],
                 'font': self.font
             })
         
@@ -125,7 +121,7 @@ class BaseCoordinates:
             render_data['chrom_label'] = {
                 'text': f"Chromosome {self.chrom}",
                 'position': (5, y_position - self.LABEL_HEIGHT),
-                'color': colors['label'],
+                'color': COLORS['label'],
                 'font': self.font
             }
             

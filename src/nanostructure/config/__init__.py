@@ -1,4 +1,4 @@
-from .colors import colors
+from .colors import COLORS
 from .coordinates import COORDINATES
 
 __all__ = ['colors'] 
