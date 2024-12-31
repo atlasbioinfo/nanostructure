@@ -152,13 +152,31 @@ class VectorRenderer(BaseRenderer):
     
     def _draw_tracks(self, dwg, tracks_data, gene_y):
         """Draw forward and reverse tracks"""
+        # 添加总计数器
+        total_counts = {
+            'match': 0,
+            'mismatch': 0,
+            'insertion': 0,
+            'deletion': 0,
+            'soft_clip': 0,
+            'hard_clip': 0,
+            'skip': 0
+        }
+        
         track_start_y = gene_y
-        print(f"Tracks starting y-coordinate: {track_start_y}")
         
         for direction in ['forward', 'reverse']:
             color_key = 'F' if direction == 'forward' else 'R'
             for track_data in tracks_data[direction]:
+                # 统计每个block的操作类型
+                for _, _, op_type in track_data['track'][4]:  # blocks在track[4]
+                    total_counts[op_type] += 1
                 self._draw_single_track(dwg, track_data, track_start_y, self.colors['reads'][color_key])
+        
+        # 只打印总计
+        print("\n=== Operation Statistics ===")
+        for op_type, count in total_counts.items():
+            print(f"{op_type}: {count}")
     
     def _draw_single_track(self, dwg, track_data, track_start_y, base_color):
         """Draw a single track including intron lines and exon blocks"""
@@ -166,7 +184,7 @@ class VectorRenderer(BaseRenderer):
         x_start, x_end, _, read, blocks = track
         y = track_data['y'] + track_start_y
         
-        # Draw intron line 
+        # Draw intron line first (as background)
         dwg.add(dwg.line(
             start=(x_start, y + self.read_height/2),
             end=(x_end, y + self.read_height/2),
@@ -174,17 +192,18 @@ class VectorRenderer(BaseRenderer):
             stroke_width=1
         ))
         
-        # Color mapping for different operations
-        color_map = {
-            'match': base_color,
-            'mismatch': '#FF0000',  # Red
-            'insertion': '#FFFF00',  # Yellow
-            'deletion': '#FFA500'    # Orange
-        }
-        
-        # Draw exon blocks with appropriate colors
+        # Draw blocks with appropriate colors
         for block_start, block_end, op_type in blocks:
-            color = color_map.get(op_type, base_color)
+            if op_type == 'skip':
+                continue  # Skip already drawn as intron line
+            
+            color = {
+                'match': base_color,
+                'mismatch': '#FF0000',  # Red
+                'insertion': '#304FFE',  # Blue
+                'deletion': '#7DFF6F',   # Green
+            }.get(op_type, base_color)
+            
             dwg.add(dwg.rect(
                 insert=(block_start, y),
                 size=(block_end - block_start, self.read_height),
