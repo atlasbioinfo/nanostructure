@@ -7,12 +7,12 @@ COORDINATES = {
         'intron_height': 2,       # 内含子线条高度
         'min_bar_size': 5,        # 最小条形图大小
         'min_axis_label_width': 50,  # 坐标轴标签最小宽度
-        'gap_label_and_bar': 4,   # 标签和条形图之间的间隔
+        'gap_label_and_bar': 15,   # 增加标签和刻度线之间的间距
     },
     'margins': {
         'top': 50,    # 顶部边距，为标题和坐标轴预留空间
         'bottom': 50,  # 底部边距
-        'left': 50,    # 左边距
+        'left': 100,    # 左边距
         'right': 50    # 右边距
     },
     'axis': {
@@ -24,8 +24,8 @@ COORDINATES = {
     },
     'spacing': {
         'axis_top_margin': 30,        # 坐标轴顶部边距
-        'label_height': 25,           # 标签高度
-        'gene_structure_margin': 0,  # 基因结构与其他元素的间距
+        'label_height': 15,           # 标签高度
+        'gene_structure_margin': 40,  # 基因结构与其他元素的间距
     },
     'styles': {
         'gene': COLORS['gene']

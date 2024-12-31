@@ -55,7 +55,6 @@ class BaseCoordinates:
             
         genome_length = self.end_pos - self.start_pos
         
-        # 计算合适的刻度间隔
         ideal_tick_count = max(4, min(10, self.width // self.MIN_AXIS_LABEL_WIDTH))
         base_unit = 10 ** (len(str(genome_length)) - 1)
         
@@ -120,7 +119,7 @@ class BaseCoordinates:
         if self.chrom:
             render_data['chrom_label'] = {
                 'text': f"Chromosome {self.chrom}",
-                'position': (5, y_position - self.LABEL_HEIGHT),
+                'position': (self.width / 2, y_position - self.LABEL_HEIGHT),
                 'color': COLORS['label'],
                 'font': self.font
             }

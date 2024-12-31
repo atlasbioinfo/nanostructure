@@ -7,19 +7,18 @@ class BaseRenderer:
         self.track_spacing = track_spacing or 2  # 默认track间距
         self.max_tracks = 100  # 添加最大track数限制
         
-        # 基础尺寸设置
-        self.min_total_height = 400
-        self.max_total_height = 2000
         
-        # 边距设置
+        self.min_total_height = 400
+        self.max_total_height = 1000
+        
+        
         self.margin = {
             'top': 10,      # 改为更小的值
             'bottom': 200,   
-            'left': 50,     
-            'right': 50     
+            'left': 150,     
+            'right': 100     
         }
         
-        # 布局设置
         self.target_aspect_ratio = 16/9
 
     def calculate_dimensions(self, forward_tracks, reverse_tracks):
@@ -72,11 +71,6 @@ class BaseRenderer:
                 'height': image_height
             },
             'margins': self.margin,
-            'title': {
-                'text': title,
-                'position': (self.margin['left'], self.margin['top'] - 100),
-                'color': self.colors['title_color']
-            },
             'read_height': self.read_height,
             'track_spacing': self.track_spacing,
             'colors': self.colors,

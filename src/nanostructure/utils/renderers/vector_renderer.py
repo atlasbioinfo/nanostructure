@@ -2,6 +2,7 @@ import svgwrite
 import cairosvg
 from pathlib import Path
 from .base_renderer import BaseRenderer
+from ...config import TITLE
 
 class VectorRenderer(BaseRenderer):
     """Vector format (SVG/PDF) renderer implementation"""
@@ -12,15 +13,29 @@ class VectorRenderer(BaseRenderer):
         if total_tracks > self.max_tracks:
             self.optimize_track_layout(forward_tracks + reverse_tracks)
             
-        render_data = self._render_common(forward_tracks, reverse_tracks, title)
-        dwg = self._create_drawing(output_path, render_data)
+        title_data = {
+            'text': title,
+            'position': (TITLE['left'], TITLE['top']),
+            'color': TITLE['color'],
+            'font_size': TITLE['font_size']
+        }
         
-        if hasattr(self, 'coordinates'):
-            # Draw coordinates and get gene_y value
-            gene_y = self._draw_coordinates(dwg)
+        title_height = title_data['font_size'] * 1.5 if title else 0
+        
+        render_data = self._render_common(forward_tracks, reverse_tracks, None)
         
         if title:
-            self._draw_title(dwg, render_data['title'])
+            render_data['dimensions']['height'] += title_height
+            
+        dwg = self._create_drawing(output_path, render_data)
+        
+        if title:
+            self._draw_title(dwg, title_data)
+        
+        title_offset = title_height if title else 0
+        
+        if hasattr(self, 'coordinates'):
+            gene_y = self._draw_coordinates(dwg, title_offset)
         
         # Pass gene_y to _draw_tracks
         self._draw_tracks(dwg, render_data['tracks'], gene_y)
@@ -46,7 +61,7 @@ class VectorRenderer(BaseRenderer):
                         fill=self.colors['background']))
         return dwg
     
-    def _draw_coordinates(self, dwg):
+    def _draw_coordinates(self, dwg, title_offset):
         """Draw coordinate system including axis, ticks, and labels"""
         coord = self.coordinates
         if coord.font is None:
@@ -54,9 +69,9 @@ class VectorRenderer(BaseRenderer):
         coord.resize_height()
         coord.calculate_ticks()
         
-        coord_data = coord.get_render_data(65)
+        coord_data = coord.get_render_data(30+title_offset)
         
-        # Draw chromosome label
+        # Draw chromosome label with offset
         if 'chrom_label' in coord_data:
             self._draw_chrom_label(dwg, coord_data['chrom_label'], coord.font_size)
         
@@ -73,6 +88,8 @@ class VectorRenderer(BaseRenderer):
                         insert=label_data['position'],
                         font_family='Arial',
                         font_size=f"{font_size}px",
+                        font_weight="bold",
+                        text_anchor="middle",
                         fill=label_data['color']))
     
     def _draw_axis_and_ticks(self, dwg, coord_data, coord):
@@ -231,6 +248,6 @@ class VectorRenderer(BaseRenderer):
                 title_data['text'],
                 insert=title_data['position'],
                 font_family='Arial',
-                font_size='16px',
-                fill=self.colors['title_color']
+                font_size=f"{title_data['font_size']}px",
+                fill=title_data['color']
             )) 
