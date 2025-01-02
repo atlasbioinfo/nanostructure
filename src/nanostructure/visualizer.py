@@ -52,22 +52,21 @@ def render_alignment_snapshot(bam_path, position=None, transcript=None, output_p
     if coords['start'] > coords['end']:
         coords['start'], coords['end'] = coords['end'], coords['start']
     
-    # 更新坐标对象的属性
+    # update coordinates
     coord.chrom = coords['chrom']
     coord.start_pos = coords['start']
     coord.end_pos = coords['end']
     
-    # 创建并设置比例尺
     xscale = XScale(coords['start'], coords['end'], image_width)
     coord.xscale = xscale
     
-    # 收集读取比对
+    # collect read alignments
     forward_tracks, reverse_tracks = collect_read_alignments(
         bam_path, coords['chrom'], coords['start'], coords['end'], 
         image_width, max_reads=max_reads, method=read_display_method
     )
     
-    # 根据strand_direction过滤tracks
+    # filter tracks by strand_direction
     if strand_direction == "F":
         reverse_tracks = []
     elif strand_direction == "R":
@@ -75,7 +74,6 @@ def render_alignment_snapshot(bam_path, position=None, transcript=None, output_p
     elif strand_direction != "B":
         raise ValueError('strand_direction must be one of: "F", "R", "B"')
     
-    # 排序reads
     forward_tracks.sort(key=lambda x: (x[0], (x[1] - x[0])))
     reverse_tracks.sort(key=lambda x: (x[0], (x[1] - x[0])))
     

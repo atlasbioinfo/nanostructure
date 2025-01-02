@@ -9,10 +9,6 @@ class VectorRenderer(BaseRenderer):
     
     def render(self, forward_tracks, reverse_tracks, output_path, title=None):
         """Render tracks to SVG/PDF format"""
-        total_tracks = len(forward_tracks) + len(reverse_tracks)
-        if total_tracks > self.max_tracks:
-            self.optimize_track_layout(forward_tracks + reverse_tracks)
-            
         title_data = {
             'text': title,
             'position': (TITLE['left'], TITLE['top']),
@@ -23,6 +19,9 @@ class VectorRenderer(BaseRenderer):
         title_height = title_data['font_size'] * 1.5 if title else 0
         
         render_data = self._render_common(forward_tracks, reverse_tracks, None)
+        
+        # Add bottom margin (e.g., 20 pixels)
+        render_data['dimensions']['height'] += 100
         
         if title:
             render_data['dimensions']['height'] += title_height

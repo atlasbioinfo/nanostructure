@@ -76,7 +76,6 @@ def collect_read_alignments(bam_path, chrom, start_pos, end_pos, image_width, ma
     Args:
         method (str): How to handle many reads:
             - 'continuous': Similar to IGV, pack reads continuously 
-            - 'downsample': Randomly sample max_reads number of reads
             - '3_end': Sort by 3' end and take top max_reads
             - '5_end': Sort by 5' end and take top max_reads
     """
@@ -91,7 +90,7 @@ def collect_read_alignments(bam_path, chrom, start_pos, end_pos, image_width, ma
             
         read_start = read.reference_start
         read_end = read.reference_end or (read_start + len(read.query_sequence))
-        
+            
         # Get exon blocks
         exon_blocks = find_exon_blocks(read)
         
@@ -116,27 +115,34 @@ def collect_read_alignments(bam_path, chrom, start_pos, end_pos, image_width, ma
                 forward_tracks.append((x_start, x_end, 0, read, image_blocks))
 
     
-    if method == 'downsample' and len(forward_tracks) + len(reverse_tracks) > max_reads:
-        # Randomly sample reads
-        all_reads = forward_tracks + reverse_tracks
-        sampled_indices = random.sample(range(len(all_reads)), max_reads)
-        sampled_reads = [all_reads[i] for i in sampled_indices]
-        forward_tracks = [r for r in sampled_reads if not r[3].is_reverse]
-        reverse_tracks = [r for r in sampled_reads if r[3].is_reverse]
+    # if method == 'downsample' and len(forward_tracks) + len(reverse_tracks) > max_reads:
+    #     # Randomly sample reads
+    #     all_reads = forward_tracks + reverse_tracks
+    #     sampled_indices = random.sample(range(len(all_reads)), max_reads)
+    #     sampled_reads = [all_reads[i] for i in sampled_indices]
+    #     forward_tracks = [r for r in sampled_reads if not r[3].is_reverse]
+    #     reverse_tracks = [r for r in sampled_reads if r[3].is_reverse]
         
-    elif method == '3_end' and len(forward_tracks) + len(reverse_tracks) > max_reads:
+    if method == '3_end' and len(forward_tracks) + len(reverse_tracks) > max_reads:
         # Sort by 3' end position
         forward_tracks.sort(key=lambda x: x[1], reverse=True)
         reverse_tracks.sort(key=lambda x: x[0])
-        forward_tracks = forward_tracks[:max_reads//2]
-        reverse_tracks = reverse_tracks[:max_reads//2]
+        forward_ratio = len(forward_tracks) / (len(forward_tracks) + len(reverse_tracks))
+        forward_max = int(max_reads * forward_ratio)
+        reverse_max = max_reads - forward_max
+        forward_tracks = forward_tracks[:forward_max]
+        reverse_tracks = reverse_tracks[:reverse_max]
         
     elif method == '5_end' and len(forward_tracks) + len(reverse_tracks) > max_reads:
         # Sort by 5' end position
         forward_tracks.sort(key=lambda x: x[0])
         reverse_tracks.sort(key=lambda x: x[1], reverse=True)
-        forward_tracks = forward_tracks[:max_reads//2]
-        reverse_tracks = reverse_tracks[:max_reads//2]
+        # calculate the ratio of forward reads
+        forward_ratio = len(forward_tracks) / (len(forward_tracks) + len(reverse_tracks))
+        forward_max = int(max_reads * forward_ratio)
+        reverse_max = max_reads - forward_max
+        forward_tracks = forward_tracks[:forward_max]
+        reverse_tracks = reverse_tracks[:reverse_max]
         
     elif method == 'continuous':
         packed_forward = []

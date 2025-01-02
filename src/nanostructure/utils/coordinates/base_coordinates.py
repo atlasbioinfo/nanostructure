@@ -83,10 +83,14 @@ class BaseCoordinates:
 
     def get_render_data(self, y_position):
         """Get coordinate rendering data"""
+        first_tick_x = self.axis_x_list[0] if self.axis_x_list else self.margin['left']
+        last_tick_x = self.axis_x_list[-1] if self.axis_x_list else (self.width - self.margin['right'])
+        
+        axis_extend=1
         render_data = {
             'axis': {
-                'line': [(self.margin['left'], y_position),
-                        (self.width - self.margin['right'], y_position)],
+                'line': [(first_tick_x-axis_extend, y_position),
+                        (last_tick_x+axis_extend, y_position)],
                 'y': y_position,
                 'color': COORDINATES['axis']['color'],
                 'width': COORDINATES['axis']['line_width']

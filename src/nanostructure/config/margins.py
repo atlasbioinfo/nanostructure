@@ -13,7 +13,7 @@ MARGINS = {
     'axis': {
         'top': 10,     # Top margin of axis
         'bottom': 1,   # Bottom margin of axis
-        'left': margin_to_the_left,    # Left margin of axis
+        'left': 50,    # Left margin of axis
         'right': 50,   # Right margin of axis
         'height': 20,  # Total height of axis area
         'label_spacing': {
